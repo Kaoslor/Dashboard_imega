@@ -147,8 +147,9 @@ def obtener_datos_proyectos(api_key, board_id):
                     except: pass
                 if not texto: continue
                 
-                if 'owner' in titulo or 'responsable' in titulo or col.get('type', '') == 'people': datos['OWNER'] = texto
-                elif 'stakeholder' in titulo or 'sponsor' in titulo: datos['STAKEHOLDER'] = texto
+                # CORRECCIÓN DE STAKEHOLDER: Priorizamos la validación de la palabra stakeholder primero
+                if 'stakeholder' in titulo or 'sponsor' in titulo: datos['STAKEHOLDER'] = texto
+                elif 'owner' in titulo or 'responsable' in titulo or col.get('type', '') == 'people': datos['OWNER'] = texto
                 elif 'status' in titulo or 'estado' in titulo or 'etado' in titulo: datos['ESTADO'] = texto
                 elif 'prioridad' in titulo: datos['PRIORIDAD'] = texto
                 elif 'inicio' in titulo: datos['FECHA INICIO'] = texto
@@ -167,9 +168,8 @@ def obtener_datos_proyectos(api_key, board_id):
                 for subitem in item['subitems']:
                     datos_sub = mapear_columnas(subitem.get('column_values', []))
                     
-                    # CORRECCIÓN: Se eliminó la regla que cambiaba el estado del padre automáticamente.
-                    # Ahora el estado del padre refleja exactamente lo que dice Monday.com
-                    
+                    # LÓGICA RESTAURADA: Hereda el estado de la subetapa si el padre no está iniciado
+                    if datos_padre['ESTADO'] in ['-', 'No iniciado'] and datos_sub['ESTADO'] not in ['-', 'No iniciado']: datos_padre['ESTADO'] = datos_sub['ESTADO']
                     if datos_padre['PRIORIDAD'] == '-' and datos_sub['PRIORIDAD'] != '-': datos_padre['PRIORIDAD'] = datos_sub['PRIORIDAD']
                     
                     subitems_data.append({
@@ -344,7 +344,49 @@ else:
     st.info("No hay proyectos con fechas asignadas (Inicio, Término o Compromiso) para los filtros seleccionados.")
 
 # ==========================================
-# 3. ZOOM POR PROYECTO 
+# 3. TABLA DETALLADA (SOLO PROYECTOS)
+# ==========================================
+st.markdown("<div class='section-title'>Matriz Operativa de Proyectos Principales</div>", unsafe_allow_html=True)
+
+col_f1, col_f2, col_f3, col_f4 = st.columns(4)
+f_tb_area = col_f1.multiselect("🏢 Filtrar Área (Vacío = Todas)", sorted(df_padres['ÁREA'].unique()), key='tb_area')
+f_tb_owner = col_f2.multiselect("👤 Filtrar Responsable (Vacío = Todos)", sorted([x for x in df_padres['OWNER'].unique() if x != '-']))
+f_tb_estado = col_f3.multiselect("📌 Filtrar Estado (Vacío = Todos)", sorted(df_padres['ESTADO'].unique()))
+f_tb_prio = col_f4.multiselect("🚨 Filtrar Prioridad (Vacío = Todas)", sorted([x for x in df_padres['PRIORIDAD'].unique() if x != '⚪ -']))
+
+df_visual = df_padres.copy()
+if f_tb_area: df_visual = df_visual[df_visual['ÁREA'].isin(f_tb_area)]
+if f_tb_owner: df_visual = df_visual[df_visual['OWNER'].isin(f_tb_owner)]
+if f_tb_estado: df_visual = df_visual[df_visual['ESTADO'].isin(f_tb_estado)]
+if f_tb_prio: df_visual = df_visual[df_visual['PRIORIDAD'].isin(f_tb_prio)]
+
+df_visual = df_visual.sort_values(by=['PRIO_NUM', 'PROYECTO'])
+columnas_orden = ['PRIORIDAD', 'ÁREA', 'PROYECTO', 'ESTADO', 'FECHA INICIO', 'FECHA TERMINO', 'OWNER']
+df_visual = df_visual[columnas_orden]
+
+estilo_principal = df_visual.style
+if hasattr(estilo_principal, 'map'): 
+    estilo_principal = estilo_principal.map(aplicar_estilo_estado, subset=['ESTADO'])
+    estilo_principal = estilo_principal.map(aplicar_negrita_proyecto, subset=['PROYECTO'])
+else: 
+    estilo_principal = estilo_principal.applymap(aplicar_estilo_estado, subset=['ESTADO'])
+    estilo_principal = estilo_principal.applymap(aplicar_negrita_proyecto, subset=['PROYECTO'])
+
+st.dataframe(
+    estilo_principal, use_container_width=True, hide_index=True,
+    column_config={
+        "PRIORIDAD": st.column_config.TextColumn("Prio", width="small"),
+        "ÁREA": st.column_config.TextColumn("Área", width="small"),
+        "PROYECTO": st.column_config.TextColumn("Proyecto", width="large"),
+        "ESTADO": st.column_config.TextColumn("Status", width="small"),
+        "FECHA INICIO": st.column_config.TextColumn("F. Inicio", width="small"),
+        "FECHA TERMINO": st.column_config.TextColumn("F. Término", width="small"),
+        "OWNER": st.column_config.TextColumn("Responsable", width="small"),
+    }
+)
+
+# ==========================================
+# 4. ZOOM POR PROYECTO 
 # ==========================================
 st.markdown("<div class='section-title'>Análisis de Profundidad por Proyecto</div>", unsafe_allow_html=True)
 
@@ -458,45 +500,3 @@ if proyecto_seleccionado:
                 estilo_zoom = estilo_zoom.applymap(aplicar_estilo_estado, subset=['ESTADO'])
                 estilo_zoom = estilo_zoom.applymap(aplicar_negrita_proyecto, subset=['PROYECTO'])
             st.dataframe(estilo_zoom, use_container_width=True, hide_index=True)
-
-# ==========================================
-# 4. TABLA DETALLADA (SOLO PROYECTOS)
-# ==========================================
-st.markdown("<div class='section-title'>Matriz Operativa de Proyectos Principales</div>", unsafe_allow_html=True)
-
-col_f1, col_f2, col_f3, col_f4 = st.columns(4)
-f_tb_area = col_f1.multiselect("🏢 Filtrar Área (Vacío = Todas)", sorted(df_padres['ÁREA'].unique()), key='tb_area')
-f_tb_owner = col_f2.multiselect("👤 Filtrar Responsable (Vacío = Todos)", sorted([x for x in df_padres['OWNER'].unique() if x != '-']))
-f_tb_estado = col_f3.multiselect("📌 Filtrar Estado (Vacío = Todos)", sorted(df_padres['ESTADO'].unique()))
-f_tb_prio = col_f4.multiselect("🚨 Filtrar Prioridad (Vacío = Todas)", sorted([x for x in df_padres['PRIORIDAD'].unique() if x != '⚪ -']))
-
-df_visual = df_padres.copy()
-if f_tb_area: df_visual = df_visual[df_visual['ÁREA'].isin(f_tb_area)]
-if f_tb_owner: df_visual = df_visual[df_visual['OWNER'].isin(f_tb_owner)]
-if f_tb_estado: df_visual = df_visual[df_visual['ESTADO'].isin(f_tb_estado)]
-if f_tb_prio: df_visual = df_visual[df_visual['PRIORIDAD'].isin(f_tb_prio)]
-
-df_visual = df_visual.sort_values(by=['PRIO_NUM', 'PROYECTO'])
-columnas_orden = ['PRIORIDAD', 'ÁREA', 'PROYECTO', 'ESTADO', 'FECHA INICIO', 'FECHA TERMINO', 'OWNER']
-df_visual = df_visual[columnas_orden]
-
-estilo_principal = df_visual.style
-if hasattr(estilo_principal, 'map'): 
-    estilo_principal = estilo_principal.map(aplicar_estilo_estado, subset=['ESTADO'])
-    estilo_principal = estilo_principal.map(aplicar_negrita_proyecto, subset=['PROYECTO'])
-else: 
-    estilo_principal = estilo_principal.applymap(aplicar_estilo_estado, subset=['ESTADO'])
-    estilo_principal = estilo_principal.applymap(aplicar_negrita_proyecto, subset=['PROYECTO'])
-
-st.dataframe(
-    estilo_principal, use_container_width=True, hide_index=True,
-    column_config={
-        "PRIORIDAD": st.column_config.TextColumn("Prio", width="small"),
-        "ÁREA": st.column_config.TextColumn("Área", width="small"),
-        "PROYECTO": st.column_config.TextColumn("Proyecto", width="large"),
-        "ESTADO": st.column_config.TextColumn("Status", width="small"),
-        "FECHA INICIO": st.column_config.TextColumn("F. Inicio", width="small"),
-        "FECHA TERMINO": st.column_config.TextColumn("F. Término", width="small"),
-        "OWNER": st.column_config.TextColumn("Responsable", width="small"),
-    }
-)
