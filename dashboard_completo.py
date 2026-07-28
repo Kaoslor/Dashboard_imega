@@ -12,7 +12,6 @@ import datetime
 # ==========================================
 st.set_page_config(page_title="Dashboard Directivo", layout="wide", initial_sidebar_state="collapsed")
 
-MONDAY_API_KEY = "eyJhbGciOiJIUzI1NiJ9.eyJ0aWQiOjY4NjIyMjE4MywiYWFpIjoxMSwidWlkIjo2MjMyNjI3NiwiaWFkIjoiMjAyNi0wNy0yNFQxMzozNDowMi4yNDRaIiwicGVyIjoibWU6d3JpdGUiLCJhY3RpZCI6MjQwMTExMjcsInJnbiI6InVzZTEifQ.LeKBF66fFj45gMueZ7V0MBQHZWETJ5C7_JBPsRs_SL4" 
 ID_TABLERO_PROYECTOS = "18423885274" 
 
 # CSS ULTRA PREMIUM Y COMPONENTES CUSTOM
