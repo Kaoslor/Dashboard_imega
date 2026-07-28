@@ -12,6 +12,8 @@ import datetime
 # ==========================================
 st.set_page_config(page_title="Dashboard Directivo", layout="wide", initial_sidebar_state="collapsed")
 
+# Así Streamlit extrae la clave de forma segura y encriptada
+MONDAY_API_KEY = st.secrets["MONDAY_API_KEY"]
 ID_TABLERO_PROYECTOS = "18423885274" 
 
 # CSS ULTRA PREMIUM Y COMPONENTES CUSTOM
