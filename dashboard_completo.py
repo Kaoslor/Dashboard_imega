@@ -401,8 +401,9 @@ if proyecto_seleccionado:
     df_zoom_subetapas = df_zoom[df_zoom['TIPO'] == 'Subetapa'].copy()
     info_padre = df_zoom[df_zoom['TIPO'] == 'Proyecto'].iloc[0]
     
-    pm = info_padre['OWNER'] if info_padre['OWNER'] != '-' else 'No Asignado'
-    sponsor = info_padre['STAKEHOLDER'] if 'STAKEHOLDER' in info_padre and info_padre['STAKEHOLDER'] != '-' else 'Gerencia General'
+    # CORRECCIÓN DE FALLBACK: Si no hay info, dice "No Asignado" en vez de "Gerencia General"
+    pm = info_padre['OWNER'] if info_padre['OWNER'] not in ['-', ''] else 'No Asignado'
+    sponsor = info_padre['STAKEHOLDER'] if info_padre.get('STAKEHOLDER') not in ['-', ''] else 'No Asignado'
     
     st.write("")
     html_superior = f"""<div class="info-bar-container"><div class="info-item"><div class="info-icon">💼</div><div><div class="info-text-label">PROYECTO</div><div class="info-text-val">{proyecto_seleccionado}</div></div></div><div class="info-divider"></div><div class="info-item"><div class="info-icon">📅</div><div><div class="info-text-label">FECHA DE CORTE</div><div class="info-text-val">{formatear_fecha_corta(HOY)}</div></div></div><div class="info-divider"></div><div class="info-item"><div class="info-icon">👥</div><div><div class="info-text-label">SPONSOR</div><div class="info-text-val">{sponsor}</div></div></div><div class="info-divider"></div><div class="info-item"><div class="info-icon">👤</div><div><div class="info-text-label">PROJECT MANAGER</div><div class="info-text-val">{pm}</div></div></div></div>"""
